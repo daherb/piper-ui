@@ -23,7 +23,7 @@ page_dict = {
     <link rel="stylesheet" href="ui.css">
     <script src="speak.js"></script>
 </head>
-<body>
+<body onload="update_speed()">
 <h1>Piper UI</h1>
 <audio preload=none id="player">
     <source src="piper.wav" type="audio/wave">
@@ -37,7 +37,8 @@ page_dict = {
 {% endfor %}
 </select>
 <label for="speed">Speed:</label>
-<input type="range"  id="speed" name="speed" min="0.75" max="15.0" /></input>
+<input type="range"  id="speed" name="speed" min="0.25" max="4" value="1.0" step="0.05" oninput="update_speed()"/></input>
+<output for="speed" id="speed_output"></output>
 <input type="button" value="Speak!" onclick="speak()"></input>
 <br>
 <br>
@@ -90,6 +91,11 @@ function speak() {
       }
     });
 }
+
+function update_speed() {
+    speed.title=speed.value + "x";
+    speed_output.value=speed.title;
+}
     '''
     }
 
@@ -137,7 +143,7 @@ def speak():
     print(data)
     syn_config = SynthesisConfig(
         volume=1,  # half as loud
-        length_scale=2.0/data['speed'],  # twice as slow
+        length_scale=1.0/data['speed'],  # twice as slow
         noise_scale=1.0,  # more audio variation
         noise_w_scale=1.0,  # more speaking variation
         normalize_audio=False, # use raw audio from voice
