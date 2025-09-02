@@ -74,19 +74,19 @@ label, select {
     'js':
     '''
 function speak() {
-    document.getElementById("player").removeAttribute("controls","");
-    voice = document.getElementById("voices").value;
-    text = document.getElementById("text").value;
-    speed = Number(document.getElementById("speed").value);
+    player.removeAttribute("controls","");
+    voiceVal = voices.value;
+    textVal = text.value;
+    speedVal = Number(speed.value);
     const request = new Request("/speak", {
       method: "POST",
-      body: JSON.stringify({'filename': voice, 'text': text, 'speed': speed}),
+      body: JSON.stringify({'filename': voiceVal, 'text': textVal, 'speed': speedVal}),
 });
     fetch(request)
     .then((response) => {
       if (response.ok) {
-        document.getElementById("player").load();
-        document.getElementById("player").setAttribute("controls","")
+        player.load();
+        player.setAttribute("controls","")
       }
     });
 }
