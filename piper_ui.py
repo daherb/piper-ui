@@ -7,8 +7,12 @@ from glob import glob
 from pathlib import Path
 import json
 import io
+import os
 
-VOICE_PATH="/usr/share/piper-voices"
+if 'PIPER_VOICE_PATH' in os.environ:
+    VOICE_PATH=os.environ['PIPER_VOICE_PATH']
+else:
+    VOICE_PATH="/usr/share/piper-voices"
 
 page_dict = {
     'html' :
