@@ -13,3 +13,5 @@ python -m venv venv
 pip install -r requirements.txt
 python piper_ui.py
 ```
+
+The default voice path is `/usr/share/piper-voices` but can be overwritten using the `PIPER_VOICE_PATH` environment variable.
