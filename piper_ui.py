@@ -8,6 +8,7 @@ from pathlib import Path
 import json
 import io
 import os
+import stable_whisper
 
 if 'PIPER_VOICE_PATH' in os.environ:
     VOICE_PATH=os.environ['PIPER_VOICE_PATH']
@@ -25,10 +26,12 @@ page_dict = {
 </head>
 <body onload="update_speed()">
 <h1>Piper UI</h1>
-<audio preload=none id="player">
+<video preload=none id="player" width="100%" height="100px">
     <source src="piper.wav" type="audio/wave">
+    <track default kind="captions" srclang="en"
+    src="piper.vtt" />
     Your browser does not support the audio element.
-</audio>
+</video>
 <br>
 <label for="voices">Voices:</label>
 <select name="voices" id="voices">
@@ -69,6 +72,9 @@ input[type=button] {
     font-size: 26px;
 }
 label, select {
+    font-size: 26px;
+}
+::cue {
     font-size: 26px;
 }
     ''',
@@ -129,6 +135,16 @@ def wav():
             )
     else:
         return Response(status=404)
+@app.route("/piper.vtt")
+def vttv():
+    if Path("piper.wav").exists():
+        with open("piper.vtt", "rb") as wav_file:
+            return send_file(
+                io.BytesIO(wav_file.read()),
+                mimetype='text/vtt'
+            )
+    else:
+        return Response(status=404)
 
 @app.route("/")
 def root():
@@ -161,6 +177,12 @@ def speak():
                     wav_file.setnchannels(chunk.sample_channels)
                 wav_file.writeframes(chunk.audio_int16_bytes)
             wav_file.writeframes(bytearray(int((voice.config.sample_rate * chunk.sample_width * chunk.sample_channels)/data['speed'])))
+    print("transcribe")
+    model = stable_whisper.load_model('base')
+#    result = model.transcribe('piper.wav')
+    result = model.align('piper.wav',data['text'],language='en')
+    result.to_srt_vtt('piper.vtt')
+    print("done")
     return Response(status=200)
 
 app.run(debug=True)
