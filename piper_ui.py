@@ -26,12 +26,12 @@ page_dict = {
 </head>
 <body onload="update_speed()">
 <h1>Piper UI</h1>
-<video preload=none id="player" width="100%" height="100px">
+<div id="cue"></div>
+<audio preload=none id="player" width="100%" height="100px">
     <source src="piper.wav" type="audio/wave">
-    <track default kind="captions" srclang="en"
-    src="piper.vtt" />
+    <track id="subtitle" default kind="captions" oncuechange="show_cue()" />
     Your browser does not support the audio element.
-</video>
+</audio>
 <br>
 <label for="voices">Voices:</label>
 <select name="voices" id="voices">
@@ -74,7 +74,7 @@ input[type=button] {
 label, select {
     font-size: 26px;
 }
-::cue {
+div#cue {
     font-size: 26px;
 }
     ''',
@@ -82,18 +82,24 @@ label, select {
     '''
 function speak() {
     player.removeAttribute("controls","");
+    // erase current subtitle
+    subtitle.src=""
+    cue.innerHTML = '';
     voiceVal = voices.value;
     textVal = text.value;
     speedVal = Number(speed.value);
+    languageVal = voices.options[voices.selectedIndex].text.substr(0,2);
     const request = new Request("/speak", {
       method: "POST",
-      body: JSON.stringify({'filename': voiceVal, 'text': textVal, 'speed': speedVal}),
+      body: JSON.stringify({'filename': voiceVal, 'text': textVal, 'speed': speedVal, 'language': languageVal}),
 });
     fetch(request)
     .then((response) => {
       if (response.ok) {
+        player.setAttribute("controls","");
+        subtitle.srclang = languageVal;
+        subtitle.src = "piper.vtt";
         player.load();
-        player.setAttribute("controls","")
       }
     });
 }
@@ -101,6 +107,13 @@ function speak() {
 function update_speed() {
     speed.title=speed.value + "x";
     speed_output.value=speed.title;
+}
+function show_cue() {
+    cues = event.target.track.activeCues;
+    if (cues.length > 0) {
+        cue.innerHTML = '';
+        cue.append(cues[0].getCueAsHTML());
+    }
 }
     '''
     }
