@@ -130,13 +130,11 @@ def wav():
             return send_file(
                 io.BytesIO(wav_file.read()),
                 mimetype='media/wave'
-                #as_attachment=True,
-                #download_name='%s.jpg' % pid
             )
     else:
         return Response(status=404)
 @app.route("/piper.vtt")
-def vttv():
+def vtt():
     if Path("piper.wav").exists():
         with open("piper.vtt", "rb") as wav_file:
             return send_file(
@@ -156,7 +154,6 @@ def root():
 def speak():
     data = json.loads(request.data)
     voice = PiperVoice.load(data['filename'])
-    print(data)
     syn_config = SynthesisConfig(
         volume=1,  # half as loud
         length_scale=1.0/data['speed'],  # twice as slow
@@ -179,10 +176,9 @@ def speak():
             wav_file.writeframes(bytearray(int((voice.config.sample_rate * chunk.sample_width * chunk.sample_channels)/data['speed'])))
     print("transcribe")
     model = stable_whisper.load_model('base')
-#    result = model.transcribe('piper.wav')
     result = model.align('piper.wav',data['text'],language='en')
     result.to_srt_vtt('piper.vtt')
     print("done")
     return Response(status=200)
 
-app.run(debug=True)
+app.run()
