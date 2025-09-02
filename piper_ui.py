@@ -165,6 +165,7 @@ def speak():
     first = True
     with wave.open("piper.wav", "wb") as wav_file:
         print("generate")
+        empty_samples = 0
         for paragraph in paragraphs:
             for chunk in voice.synthesize(paragraph, syn_config=syn_config):
                 if first:
@@ -172,8 +173,11 @@ def speak():
                     wav_file.setframerate(chunk.sample_rate)
                     wav_file.setsampwidth(chunk.sample_width)
                     wav_file.setnchannels(chunk.sample_channels)
+                    empty_samples = int((voice.config.sample_rate * chunk.sample_width * chunk.sample_channels*0.5)/data['speed'])
+                    while empty_samples % chunk.sample_width != 0:
+                        empty_samples += 1
                 wav_file.writeframes(chunk.audio_int16_bytes)
-            wav_file.writeframes(bytearray(int((voice.config.sample_rate * chunk.sample_width * chunk.sample_channels)/data['speed'])))
+            wav_file.writeframes(bytearray(empty_samples))
     print("transcribe")
     model = stable_whisper.load_model('base')
     result = model.align('piper.wav',data['text'],language='en')
