@@ -148,9 +148,19 @@ def speak():
         noise_w_scale=1.0,  # more speaking variation
         normalize_audio=False, # use raw audio from voice
     )
+    paragraphs = data['text'].split('\n\n')
+    first = True
     with wave.open("piper.wav", "wb") as wav_file:
-         voice.synthesize_wav(data['text'], wav_file, syn_config=syn_config)
-         print("done")
+        print("generate")
+        for paragraph in paragraphs:
+            for chunk in voice.synthesize(paragraph, syn_config=syn_config):
+                if first:
+                    first = False
+                    wav_file.setframerate(chunk.sample_rate)
+                    wav_file.setsampwidth(chunk.sample_width)
+                    wav_file.setnchannels(chunk.sample_channels)
+                wav_file.writeframes(chunk.audio_int16_bytes)
+            wav_file.writeframes(bytearray(int((voice.config.sample_rate * chunk.sample_width * chunk.sample_channels)/data['speed'])))
     return Response(status=200)
 
 app.run(debug=True)
