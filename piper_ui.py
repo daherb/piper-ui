@@ -286,7 +286,6 @@ function filter_tags(acceptable) {
             nodes[ct].replaceWith(p);
         }
     }
-    text.innerHTML
 }
     '''
     }
