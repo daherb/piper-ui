@@ -24,11 +24,11 @@ page_dict = {
     <link rel="stylesheet" href="ui.css">
     <script src="speak.js"></script>
 </head>
-<body onload="update_speed()">
+<body onload="load()">
 <h1>Piper UI</h1>
 <div id="cue"></div>
-<audio preload=none id="player" width="100%" height="100px">
-    <source src="piper.wav" type="audio/wave">
+<audio preload=none id="player" width="100%" height="100px" onplay="remove_highlight(text)">
+    <source id="playerSource" src="piper.wav" type="audio/wave">
     <track id="subtitle" default kind="captions" oncuechange="show_cue()" />
     Your browser does not support the audio element.
 </audio>
@@ -42,11 +42,14 @@ page_dict = {
 <label for="speed">Speed:</label>
 <input type="range"  id="speed" name="speed" min="0.25" max="4" value="1.0" step="0.05" oninput="update_speed()"/></input>
 <output for="speed" id="speed_output"></output>
+<label for="showSubtitles">Subtitles:</label>
+<input type="checkbox" id="showSubtitles" onclick="toggle_subtitles()"></input>
+<label for="showKaraoke">Karaoke:</label>
+<input type="checkbox" id="showKaraoke" disabled></input>
 <input type="button" value="Speak!" onclick="speak()"></input>
 <br>
 <br>
-<textarea id="text">
-</textarea>
+<div id="text" contentEditable="true" oninput="filter_tags(['p'])">Add text here...</div>
 </body>
 </html>
     ''',
@@ -74,21 +77,75 @@ input[type=button] {
 label, select {
     font-size: 26px;
 }
+div#text {
+    border-style: inset;
+    width:  calc(100vw - 80px);      /* calc and viewport to the rescue */
+    height: calc(100vh - 280px);
+    padding: 12px 20px;
+    resize: none;
+    overflow-y:scroll;
+}
 div#cue {
-    font-size: 26px;
+    height: 40px;
+    width:  calc(100vw - 80px);      /* calc and viewport to the rescue */
+    padding: 10px;
+    border: 2px;
+    overflow: auto;
+    resize: both;
+}
+span.highlight {
+    color: green;
 }
     ''',
     'js':
     '''
+"use strict";
+var cue_words = []
+
+// Page load handler
+function load() {
+    // Sets speed label and tool tip
+    update_speed();
+    // Add event handler that seems to otherwise not work properly
+    player.addEventListener("timeupdate", highlight_word)
+    // Check for resize of cue
+    const resizeObserver = new ResizeObserver((entries) => resize_cue(entries));
+    resizeObserver.observe(cue);
+}
+
+// Handles resizing the cue area
+function resize_cue(entries) {
+    console.log(entries[0].contentBoxSize[0].blockSize);
+    cue.style.fontSize=entries[0].contentBoxSize[0].blockSize + "px";
+}
+// Matches the state of karaoke with the State of subtitle
+function toggle_subtitles() {
+    if (showSubtitles.checked) {
+        showKaraoke.removeAttribute("disabled");
+    }
+    else {
+        showKaraoke.setAttribute("disabled","true");
+        showKaraoke.checked = false;
+    } 
+}
+// Sends the text to the server and loads the result into the player
 function speak() {
     player.removeAttribute("controls","");
     // erase current subtitle
     subtitle.src=""
-    cue.innerHTML = '';
-    voiceVal = voices.value;
-    textVal = text.value;
-    speedVal = Number(speed.value);
-    languageVal = voices.options[voices.selectedIndex].text.substr(0,2);
+    cue.innerHTML = '&nbsp;';
+    const voiceVal = voices.value;
+    // If we have paragraphs, get their text content as an array,
+    // otherwise get a simple array with just the text content of the text element
+    var textVal;
+    if (text.getElementsByTagName("p").length > 0) {
+      textVal = Array.from(text.getElementsByTagName("p")).map((p) => p.textContent);
+    }
+    else {
+      textVal = [text.textContent];
+    }
+    const speedVal = Number(speed.value);
+    const languageVal = voices.options[voices.selectedIndex].text.substr(0,2);
     const request = new Request("/speak", {
       method: "POST",
       body: JSON.stringify({'filename': voiceVal, 'text': textVal, 'speed': speedVal, 'language': languageVal}),
@@ -99,21 +156,137 @@ function speak() {
         player.setAttribute("controls","");
         subtitle.srclang = languageVal;
         subtitle.src = "piper.vtt";
+        playerSource.src = "piper.wav";
         player.load();
       }
     });
 }
 
+// Updates the speed label and tool tip
 function update_speed() {
     speed.title=speed.value + "x";
     speed_output.value=speed.title;
 }
-function show_cue() {
-    cues = event.target.track.activeCues;
-    if (cues.length > 0) {
-        cue.innerHTML = '';
-        cue.append(cues[0].getCueAsHTML());
+
+// Parse cues and convert into a list of words with start and end time
+function parse_cue(cue) {
+    const cueFormat = RegExp("(?<startTime><?(?<startHour>\\\\d{2}):(?<startMinute>\\\\d{2}):(?<startSecond>\\\\d{2}.\\\\d{3})>)?(?<word>.+)(?<endTime><(?<endHour>\\\\d{2}):(?<endMinute>\\\\d{2}):(?<endSecond>\\\\d{2}.\\\\d{3})>?)");
+    var parsed = []
+    var text = cue.text;
+    // Add missing start and end tags
+    if (!text.startsWith("<")) {
+        text = "<00:00:00.000>" + text
     }
+    if (!text.endsWith(">")) {
+       text = text + "<99:99:99.999>" // This should be enough for pretty much everything
+    }
+    const parts = text.split(/>\\s+<?/);
+    for (var index in parts) {
+        const part = parts[index]
+        const match = cueFormat.exec(part);
+        if (match != null) {
+            var start = match.groups.startTime;
+            if (typeof(start) == 'undefined') {
+                // Copy the end of the previous cue of it exists
+                if (parsed.length > 0) {
+                    start = parsed[parsed.length -1].end;
+                }
+                else {
+                   start = 0;
+                }
+            }
+            else {
+                start = Number.parseInt(match.groups.startHour) * 3600 + Number.parseInt(match.groups.startMinute) * 60 + Number.parseFloat(match.groups.startSecond);
+            }
+            const word = match.groups.word;
+            // Fix the end to the duration of the current file
+            var end;
+            if (match.groups.endTime == "<99:99:99.999>") {
+                end = player.duration;
+            }
+            else {
+                end = Number.parseInt(match.groups.endHour) * 3600 + Number.parseInt(match.groups.endMinute) * 60 + Number.parseFloat(match.groups.endSecond);
+            }
+            const info = {'start': start, 'word': word, 'end': end}
+            parsed.push(info);
+        }
+    }
+    return parsed;
+}
+
+// Shows cues when triggered by the player. Updates both the subtitle view and the highlights in the text itself
+function show_cue() {
+    const cues = event.target.track.activeCues;
+    // reset cue words
+    cue_words = []
+    if (cues.length > 0) { // only clear if we have new items
+        cue.innerHTML = '';
+    } 
+    for (var ct = 0;  ct < cues.length; ct++) {
+        if (showSubtitles.checked) {
+            cue.append(cues[ct].getCueAsHTML());
+        }
+        const parsed_cues = parse_cue(cues[ct]);
+        cue_words = cue_words.concat(parsed_cues);
+        // Remove all timestamps and newlines. Merge multiple spaces
+        const highlight_text = cues[ct].text.replaceAll(/\\s*<.+?>\\s*/g," ").replaceAll(/\\n/g," ").replaceAll(/\\s+/g, " ");
+        add_highlight(text,highlight_text);
+    }
+}
+
+// Helper to remove all highlight spans from an element
+function remove_highlight(element) {
+    // Loop to make sure we find everything
+    while (text.getElementsByClassName("highlight").length > 0) {
+        Array.from(text.getElementsByClassName("highlight")).map((e) => e.outerHTML = e.innerHTML)
+    }
+}
+
+// Helper add a highlight span to an element surrounding a given text
+function add_highlight(element,text) {
+    element.innerHTML = element.innerHTML.replace(text,'<span class="highlight">' + text + '</span>');
+}
+
+// Karaoke function: highlight a word in the shown subtitle
+function highlight_word() {
+    if (showKaraoke.checked) {
+        const time = player.currentTime;
+        remove_highlight(cue);
+        if (cue_words.length > 0) {
+            if (cue_words[0].start <= time)  { // for some reason it works much better without checking the end time
+                add_highlight(cue,cue_words[0].word);
+                cue_words.shift()
+            }
+        }
+    }
+}
+
+// Cleans up the text by removing all tags that are not listed as acceptable, all attributes and all styles. It also puts all top-level text nodes into paragraph tags
+function filter_tags(acceptable) {
+    const acceptableLower = acceptable.map((tag) => tag.toLowerCase());
+    // Continue until only paragraphs are left
+    while (!Array.from(text.getElementsByTagName("*")).every((t) => acceptableLower.some((a) => t.tagName.toLowerCase() == a))) {
+        // Get the first non-p element
+        var element = Array.from(text.getElementsByTagName("*")).filter((t) => !(acceptableLower.some((a) => t.tagName.toLowerCase() == a)))[0];
+        // strip tag
+        element.outerHTML = element.innerHTML;
+    }
+    // Strip styles, attributes and empty elements
+    Array.from(text.getElementsByTagName("*")).map((e) => { Array.from(e.attributes).map((a) => e.removeAttribute(a.name)) ; e.style = "" ; if (e.textContent == "") { e.remove() } ; });
+    // Normalize tree
+    text.normalize();
+    // Replace newlinse by spaces
+    text.innerHTML = text.innerHTML.replaceAll(/\\s*\\n+\\s*/g," ");
+    // Add paragraph tags around top-level text nodes
+    const nodes = Array.from(text.childNodes);
+    for (var ct = 0 ; ct < nodes.length; ct ++) {
+        if (nodes[ct].nodeType == Node.TEXT_NODE) {
+            const p = document.createElement("p");
+            p.innerHTML=nodes[ct].textContent;
+            nodes[ct].replaceWith(p);
+        }
+    }
+    text.innerHTML
 }
     '''
     }
@@ -146,9 +319,10 @@ def wav():
             )
     else:
         return Response(status=404)
+
 @app.route("/piper.vtt")
 def vtt():
-    if Path("piper.wav").exists():
+    if Path("piper.vtt").exists():
         with open("piper.vtt", "rb") as wav_file:
             return send_file(
                 io.BytesIO(wav_file.read()),
@@ -166,15 +340,16 @@ def root():
 @app.route("/speak",methods=['POST'])
 def speak():
     data = json.loads(request.data)
+    print(data)
     voice = PiperVoice.load(data['filename'])
     syn_config = SynthesisConfig(
-        volume=1,  # half as loud
-        length_scale=1.0/data['speed'],  # twice as slow
+        volume=1,  
+        length_scale=1.0/data['speed'],  # adjust speed
         noise_scale=1.0,  # more audio variation
         noise_w_scale=1.0,  # more speaking variation
         normalize_audio=False, # use raw audio from voice
     )
-    paragraphs = data['text'].split('\n\n')
+    paragraphs = data['text']
     first = True
     with wave.open("piper.wav", "wb") as wav_file:
         print("generate")
@@ -193,7 +368,7 @@ def speak():
             wav_file.writeframes(bytearray(empty_samples))
     print("transcribe")
     model = stable_whisper.load_model('base')
-    result = model.align('piper.wav',data['text'],language='en')
+    result = model.align('piper.wav',"\n\n".join(data['text']),language='en')
     result.to_srt_vtt('piper.vtt')
     print("done")
     return Response(status=200)
