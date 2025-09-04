@@ -273,7 +273,7 @@ function filter_tags(acceptable) {
     }
     // Strip styles, attributes and empty elements
     Array.from(text.getElementsByTagName("*")).map((e) => { Array.from(e.attributes).map((a) => e.removeAttribute(a.name)) ; e.style = "" ; if (e.textContent == "") { e.remove() } ; });
-    // Normalize tree
+    // Normalize tree -> This could be problematic
     text.normalize();
     // Replace newlinse by spaces
     text.innerHTML = text.innerHTML.replaceAll(/\\s*\\n+\\s*/g," ");
