@@ -27,7 +27,7 @@ page_dict = {
 <body onload="load()">
 <h1>Piper UI</h1>
 <div id="cue"></div>
-<audio preload=none id="player" width="100%" height="100px" onplay="remove_highlight(text)">
+<audio preload=none id="player" width="100%" height="100px">
     <source id="playerSource" src="piper.wav" type="audio/wave">
     <track id="subtitle" default kind="captions" oncuechange="show_cue()" />
     Your browser does not support the audio element.
@@ -233,11 +233,13 @@ function show_cue() {
 }
 
 // Helper to remove all highlight spans from an element
-function remove_highlight(element) {
-    // Loop to make sure we find everything
-    while (text.getElementsByClassName("highlight").length > 0) {
-        Array.from(text.getElementsByClassName("highlight")).map((e) => e.outerHTML = e.innerHTML)
-    }
+function remove_highlight() {
+    console.log("clean")
+    cue.innerHTML = cue.textContent;
+//    // Loop to make sure we find everything
+//    while (text.getElementsByClassName("highlight").length > 0) {
+//        Array.from(text.getElementsByClassName("highlight")).map((e) => e.outerHTML = e.innerHTML)
+//    }
 }
 
 // Helper add a highlight span to an element surrounding a given text
@@ -249,7 +251,7 @@ function add_highlight(element,text) {
 function highlight_word() {
     if (showKaraoke.checked) {
         const time = player.currentTime;
-        remove_highlight(cue);
+        remove_highlight();
         if (cue_words.length > 0) {
             if (cue_words[0].start <= time)  { // for some reason it works much better without checking the end time
                 add_highlight(cue,cue_words[0].word);
