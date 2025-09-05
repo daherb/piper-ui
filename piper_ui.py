@@ -115,7 +115,6 @@ function load() {
 
 // Handles resizing the cue area
 function resize_cue(entries) {
-    console.log(entries[0].contentBoxSize[0].blockSize);
     cue.style.fontSize=entries[0].contentBoxSize[0].blockSize + "px";
 }
 // Matches the state of karaoke with the State of subtitle
