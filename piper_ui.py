@@ -137,13 +137,11 @@ function speak() {
     const voiceVal = voices.value;
     // If we have paragraphs, get their text content as an array,
     // otherwise get a simple array with just the text content of the text element
-    var textVal;
-    if (text.getElementsByTagName("p").length > 0) {
-      textVal = Array.from(text.getElementsByTagName("p")).map((p) => p.textContent);
-    }
-    else {
-      textVal = [text.textContent];
-    }
+    var textVal = [];
+    Array.from(text.childNodes).map((node) => {
+        textVal.push(node.textContent);
+    });
+    textVal = textVal.filter((txt) => !/^\\s*$/.test(txt)).map((txt) => txt.replace(/^\\s+/,"").replace(/\\s+$/,""));
     const speedVal = Number(speed.value);
     const languageVal = voices.options[voices.selectedIndex].text.substr(0,2);
     const request = new Request("/speak", {
