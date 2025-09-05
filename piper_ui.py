@@ -49,7 +49,7 @@ page_dict = {
 <input type="button" value="Speak!" onclick="speak()"></input>
 <br>
 <br>
-<div id="text" contentEditable="true" oninput="filter_tags(['p'])">Add text here...</div>
+<div id="text" contentEditable="true" oninput="cleanup_input(['p','br'])">Add text here...</div>
 </body>
 </html>
     ''',
@@ -262,30 +262,33 @@ function highlight_word() {
 }
 
 // Cleans up the text by removing all tags that are not listed as acceptable, all attributes and all styles. It also puts all top-level text nodes into paragraph tags
-function filter_tags(acceptable) {
+function cleanup_input(acceptable) {
     const acceptableLower = acceptable.map((tag) => tag.toLowerCase());
     // Continue until only paragraphs are left
     while (!Array.from(text.getElementsByTagName("*")).every((t) => acceptableLower.some((a) => t.tagName.toLowerCase() == a))) {
         // Get the first non-p element
         var element = Array.from(text.getElementsByTagName("*")).filter((t) => !(acceptableLower.some((a) => t.tagName.toLowerCase() == a)))[0];
-        // strip tag
-        element.outerHTML = element.innerHTML;
-    }
-    // Strip styles, attributes and empty elements
-    Array.from(text.getElementsByTagName("*")).map((e) => { Array.from(e.attributes).map((a) => e.removeAttribute(a.name)) ; e.style = "" ; if (e.textContent == "") { e.remove() } ; });
-    // Normalize tree -> This could be problematic
-    text.normalize();
-    // Replace newlinse by spaces
-    text.innerHTML = text.innerHTML.replaceAll(/\\s*\\n+\\s*/g," ");
-    // Add paragraph tags around top-level text nodes
-    const nodes = Array.from(text.childNodes);
-    for (var ct = 0 ; ct < nodes.length; ct ++) {
-        if (nodes[ct].nodeType == Node.TEXT_NODE) {
-            const p = document.createElement("p");
-            p.innerHTML=nodes[ct].textContent;
-            nodes[ct].replaceWith(p);
+        // replace tag by its content, except for style
+        if (element.tagName.toLowerCase() != 'style') {
+            element.outerHTML = element.innerHTML;
+        }
+        else {
+            element.remove();
         }
     }
+    // Add spaces to the text node
+    Array.from(text.childNodes).map((node) => { if (node.nodeType == Node.TEXT_NODE) { node.textContent += ' ' }})
+    // Strip attributes (incl styles) and elements without text (except br)
+    Array.from(text.getElementsByTagName("*")).map((e) => { Array.from(e.attributes).map((a) => e.removeAttribute(a.name)) ; if (e.tagName.toLowerCase() != 'br' && e.textContent == "") { e.remove() } ; });
+    // Normalize tree: merge neighboring text nodes and remove empty elements
+    text.normalize();
+    // More manual normalization the HTML 
+    var tmpHTML = text.innerHTML.replaceAll('<br>','\\n')                     // brs by new newlines
+                                .replaceAll(/\\n\\n/g,'\\n</p>\\n<p>\\n')     // multiple newlines by paragraph breaks
+                                .replaceAll(/\\s*\\n+\\s*/g," ")              // newlines with dangling spaces by a single space
+                                .replace(/^\\s*/,"")                          // initial spaces                                
+    if (!tmpHTML.startsWith("<p>")) { tmpHTML = "<p>" + tmpHTML + "</p>" }    // if we don't have initial p tags add them around the whole content
+    text.innerHTML = tmpHTML;
 }
     '''
     }
