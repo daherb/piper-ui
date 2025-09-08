@@ -9,6 +9,7 @@ import json
 import io
 import os
 import stable_whisper
+import logging
 
 if 'PIPER_VOICE_PATH' in os.environ:
     VOICE_PATH=os.environ['PIPER_VOICE_PATH']
@@ -341,7 +342,7 @@ def root():
 @app.route("/speak",methods=['POST'])
 def speak():
     data = json.loads(request.data)
-    print(data)
+    app.logger.info(json.dumps(data, indent=4))
     voice = PiperVoice.load(data['filename'])
     syn_config = SynthesisConfig(
         volume=1,  
@@ -374,4 +375,5 @@ def speak():
     print("done")
     return Response(status=200)
 
+app.logger.setLevel(logging.INFO)
 app.run()
