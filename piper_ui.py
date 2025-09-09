@@ -283,10 +283,11 @@ function cleanup_input(acceptable) {
     // Normalize tree: merge neighboring text nodes and remove empty elements
     text.normalize();
     // More manual normalization the HTML 
-    var tmpHTML = text.innerHTML.replaceAll('<br>','\\n')                     // brs by new newlines
-                                .replaceAll(/\\n\\n/g,'\\n</p>\\n<p>\\n')     // multiple newlines by paragraph breaks
-                                .replaceAll(/\\s*\\n+\\s*/g," ")              // newlines with dangling spaces by a single space
-                                .replace(/^\\s*/,"")                          // initial spaces                                
+    var tmpHTML = text.innerHTML.replaceAll('<br>','\\n')                     // br's by new newlines
+                                .replaceAll(/\\n\\n/gu,'\\n</p>\\n<p>\\n')    // multiple newlines by paragraph breaks
+                                .replaceAll(/\\s*\\n+\\s*/gu," ")             // newlines with dangling spaces by a single space
+                                .replaceAll(/\\s+/gu," ")                     // several spaces by a single space
+                                .replace(/^\\s*/u,"")                         // initial spaces
     if (!tmpHTML.startsWith("<p>")) { tmpHTML = "<p>" + tmpHTML + "</p>" }    // if we don't have initial p tags add them around the whole content
     text.innerHTML = tmpHTML;
 }
