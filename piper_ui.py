@@ -234,12 +234,7 @@ function show_cue() {
 
 // Helper to remove all highlight spans from an element
 function remove_highlight() {
-    console.log("clean")
     cue.innerHTML = cue.textContent;
-//    // Loop to make sure we find everything
-//    while (text.getElementsByClassName("highlight").length > 0) {
-//        Array.from(text.getElementsByClassName("highlight")).map((e) => e.outerHTML = e.innerHTML)
-//    }
 }
 
 // Helper add a highlight span to an element surrounding a given text
