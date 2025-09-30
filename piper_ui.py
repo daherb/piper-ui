@@ -47,10 +47,12 @@ page_dict = {
 <input type="checkbox" id="showSubtitles" onclick="toggle_subtitles()"></input>
 <label for="showKaraoke">Karaoke:</label>
 <input type="checkbox" id="showKaraoke" disabled></input>
-<input type="button" value="Speak!" onclick="speak()"></input>
+<input type="button" value="Magic!*" onclick="speak()"></input>
 <br>
 <br>
 <div id="text" contentEditable="true" oninput="cleanup_input(['p','br'])">Add text here...</div>
+<br>
+* Convert text to sound file that can be played then
 </body>
 </html>
     ''',
