@@ -278,11 +278,28 @@ function cleanup_input(acceptable) {
     // Normalize tree: merge neighboring text nodes and remove empty elements
     text.normalize();
     // More manual normalization the HTML 
-    var tmpHTML = text.innerHTML.replaceAll('<br>','\\n')                     // br's by new newlines
-                                .replaceAll(/\\n\\n/gu,'\\n</p>\\n<p>\\n')    // multiple newlines by paragraph breaks
-                                .replaceAll(/\\s*\\n+\\s*/gu," ")             // newlines with dangling spaces by a single space
-                                .replaceAll(/\\s+/gu," ")                     // several spaces by a single space
-                                .replace(/^\\s*/u,"")                         // initial spaces
+    var tmpHTML = text.innerHTML
+      .replaceAll(/&amp;/g,   "&")
+      .replaceAll(/&lt;/g,    "<")
+      .replaceAll(/&gt;/g,    ">")
+      .replaceAll(/&quot;/g,  "\\"")
+      .replaceAll(/&apos;/g,  "'")
+      .replaceAll(/&nbsp;/g,  " ")
+      .replaceAll(/&ndash;/g, "–")
+      .replaceAll(/&mdash;/g, "—")
+      .replaceAll(/&copy;/g,  "©")
+      .replaceAll(/&reg;/g,   "®")
+      .replaceAll(/&trade;/g, "™")
+      .replaceAll(/&asymp;/g, "≈")
+      .replaceAll(/&ne;/g,    "≠")
+      .replaceAll(/&pound;/g, "£")
+      .replaceAll(/&euro;/g,  "€")
+      .replaceAll(/&deg;/g, "°")
+      .replaceAll('<br>','\\n')                     // br's by new newlines
+      .replaceAll(/\\n\\n/gu,'\\n</p>\\n<p>\\n')    // multiple newlines by paragraph breaks
+      .replaceAll(/\\s*\\n+\\s*/gu," ")             // newlines with dangling spaces by a single space
+      .replaceAll(/\\s+/gu," ")                     // several spaces by a single space
+      .replace(/^\\s*/u,"")                         // initial spaces
     if (!tmpHTML.startsWith("<p>")) { tmpHTML = "<p>" + tmpHTML + "</p>" }    // if we don't have initial p tags add them around the whole content
     text.innerHTML = tmpHTML;
 }
