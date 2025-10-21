@@ -17,3 +17,20 @@ python piper_ui.py
 ```
 
 The default voice path is `/usr/share/piper-voices` but can be overwritten using the `PIPER_VOICE_PATH` environment variable.
+
+## Download voices
+You can download all voices by cloning https://huggingface.co/rhasspy/piper-voices with LFS:
+```
+git lfs install
+git clone https://huggingface.co/rhasspy/piper-voices
+```
+
+Alternatively you can download only idividual voices e.g. just the Swedish voices:
+
+```
+git lfs install
+git clone https://huggingface.co/rhasspy/piper-voices --sparse
+cd piper-voices
+git sparse-checkout init
+git sparse-checkout set "sv"
+```
